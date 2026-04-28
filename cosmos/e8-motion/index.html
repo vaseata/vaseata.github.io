@@ -356,15 +356,64 @@
   }
   .loader.hide { opacity: 0; pointer-events: none; }
 
+  /* ===== モバイル用パネルトグル ===== */
+  /* PC では非表示。モバイル時のみ右下に表示してパネルの開閉に使う */
+  .panel-toggle {
+    display: none;
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    width: 52px;
+    height: 52px;
+    border-radius: 999px;
+    border: 1px solid var(--accent-dim);
+    background: rgba(18, 18, 22, 0.92);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    color: var(--accent);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 18px;
+    cursor: pointer;
+    z-index: 20;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.25s ease, background 0.2s;
+    /* タップ領域は最小 44px を確保（実サイズ 52px） */
+  }
+  .panel-toggle:active { transform: scale(0.94); }
+  .panel-toggle .icon-open,
+  .panel-toggle .icon-close { line-height: 1; }
+  .panel-toggle .icon-close { display: none; }
+  body.panel-open .panel-toggle .icon-open { display: none; }
+  body.panel-open .panel-toggle .icon-close { display: inline; }
+
   @media (max-width: 900px) {
     .panel-left, .panel-right {
       width: calc(100% - 32px);
       left: 16px; right: 16px;
     }
-    .panel-left { top: auto; bottom: 60px; max-height: 40vh; }
+    /* 左パネル: 既定では画面外に隠し、トグルで滑り出す */
+    .panel-left {
+      top: auto;
+      bottom: 80px;
+      max-height: 65vh;
+      transform: translateY(calc(100% + 100px));
+      opacity: 0;
+      pointer-events: none;
+      transition: transform 0.3s ease, opacity 0.25s ease;
+    }
+    body.panel-open .panel-left {
+      transform: translateY(0);
+      opacity: 1;
+      pointer-events: auto;
+    }
     .panel-right { display: none; }
     .header { padding: 16px 20px; }
     .title-block h1 { font-size: 22px; }
+    /* モバイル時のみトグルボタンを表示 */
+    .panel-toggle { display: flex; }
+    /* 下部のヒントとリンクが重なって見えるので、モバイル時は隠す */
+    .back-link, .hint { display: none; }
   }
 </style>
 </head>
@@ -495,6 +544,14 @@
 <a href="e8-leech-visualizer.html" class="back-link">← Back to full visualizer</a>
 
 <div class="hint">drag · scroll · <span>R</span> reset · <span>SPACE</span> pause</div>
+
+<!-- ===== モバイル用パネルトグル ===== -->
+<!-- 設定パネルがビューを覆ってしまわないよう、デフォルトは閉じておく -->
+<button class="panel-toggle" id="panelToggle" type="button"
+        aria-label="Toggle rotation control panel" aria-expanded="false">
+  <span class="icon-open" aria-hidden="true">⚙</span>
+  <span class="icon-close" aria-hidden="true">×</span>
+</button>
 
 <script type="importmap">
 {
@@ -965,6 +1022,17 @@ updateGeometry();
 updatePlaneCount();
 animate();
 setTimeout(() => document.getElementById('loader').classList.add('hide'), 500);
+
+// ===== モバイル用パネルトグル =====
+// 狭い画面ではパネルが視界を覆ってしまうため、初期状態は閉じる。
+// ボタンタップで body にクラスを付与し、CSS のトランジションで滑り出させる。
+const panelToggle = document.getElementById('panelToggle');
+if (panelToggle) {
+  panelToggle.addEventListener('click', () => {
+    const opened = document.body.classList.toggle('panel-open');
+    panelToggle.setAttribute('aria-expanded', opened ? 'true' : 'false');
+  });
+}
 
 </script>
 </body>
