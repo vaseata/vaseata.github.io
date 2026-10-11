@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>つくったもの</title>
+<meta name="description" content="つくったものを1ページに。">
+<meta name="theme-color" content="#0e1014">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="つくったもの">
+<style>
+  :root {
+    --bg: #f6f5f1; --card: #ffffff; --ink: #17181c; --sub: #6b6f78;
+    --line: #e4e2db; --accent: #c2410c; --chip: #efede6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0e1014; --card: #181b21; --ink: #f1f1ee; --sub: #9aa0aa;
+      --line: #272b33; --accent: #fb923c; --chip: #20242c;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", sans-serif;
+    line-height: 1.5;
+    padding: env(safe-area-inset-top) 16px calc(32px + env(safe-area-inset-bottom));
+  }
+  header { max-width: 1080px; margin: 0 auto; padding: 28px 0 8px; }
+  h1 { font-size: 26px; margin: 0; letter-spacing: .02em; }
+  .count { color: var(--sub); font-size: 13px; margin-top: 2px; }
+
+  nav {
+    position: sticky; top: 0; z-index: 5; background: var(--bg);
+    max-width: 1080px; margin: 0 auto; padding: 10px 0;
+    display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none;
+  }
+  nav::-webkit-scrollbar { display: none; }
+  nav button {
+    flex: none; border: 1px solid var(--line); background: var(--chip); color: var(--ink);
+    font: inherit; font-size: 14px; padding: 8px 14px; border-radius: 999px; cursor: pointer;
+  }
+  nav button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+  main {
+    max-width: 1080px; margin: 8px auto 0;
+    display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    overflow: hidden; display: flex; flex-direction: column;
+  }
+  .card a.open { color: inherit; text-decoration: none; display: block; }
+  .thumb { aspect-ratio: 16 / 10; width: 100%; object-fit: cover; object-position: top; display: block; background: var(--chip); }
+  .body { padding: 12px 14px 4px; }
+  .title { font-size: 17px; font-weight: 700; margin: 0; }
+  .desc { font-size: 13px; color: var(--sub); margin: 2px 0 0; }
+  .foot { display: flex; align-items: center; justify-content: space-between; padding: 6px 8px 8px 14px; margin-top: auto; }
+  .tag { font-size: 12px; color: var(--accent); }
+  .share {
+    border: 0; background: none; color: var(--sub); font: inherit; font-size: 13px;
+    padding: 10px 8px; min-height: 44px; cursor: pointer; border-radius: 8px;
+  }
+  .share:active { background: var(--chip); }
+  .card[hidden] { display: none; }
+  footer { max-width: 1080px; margin: 28px auto 0; color: var(--sub); font-size: 12px; text-align: center; }
+  footer a { color: inherit; }
+  #toast {
+    position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom)); transform: translateX(-50%);
+    background: var(--ink); color: var(--bg); font-size: 14px; padding: 10px 16px; border-radius: 999px;
+    opacity: 0; pointer-events: none; transition: opacity .2s;
+  }
+  #toast.on { opacity: 1; }
+</style>
+</head>
+<body>
+<header>
+  <h1>つくったもの</h1>
+  <div class="count" id="count"></div>
+</header>
+<nav id="nav" aria-label="絞り込み"></nav>
+<main id="grid"></main>
+<footer><a href="https://github.com/vaseata">github.com/vaseata</a></footer>
+<div id="toast" role="status"></div>
+
+<script>
+// 作品を足すときは、ここに1行足す（新しいものを上に）
+const BASE = "https://vaseata.github.io";
+const WORKS = [
+  { id: "miura-board",        tag: "暮らしの道具", title: "最近の三浦",          desc: "三浦A邸の近況ボード",                         url: BASE + "/miura-board/" },
+  { id: "anime-catalog-web",  tag: "暮らしの道具", title: "アニメカタログ",      desc: "新番組・放送中・劇場アニメをポスターで見渡す", url: BASE + "/anime-catalog-web/" },
+  { id: "brew-timer",         tag: "暮らしの道具", title: "コーヒー抽出タイマー", desc: "Coffee Brew Timer v4",                        url: BASE + "/brew-timer/coffee-brew-timer-v4.html" },
+  { id: "merkaba",            tag: "宇宙・幾何",   title: "MERKABA",             desc: "Stella Octangula / Sacred Geometry 02",        url: BASE + "/merkaba/" },
+  { id: "vector-equilibrium", tag: "宇宙・幾何",   title: "VECTOR EQUILIBRIUM",  desc: "ベクトル平衡体",                               url: BASE + "/vector-equilibrium/" },
+  { id: "e8-motion",          tag: "宇宙・幾何",   title: "E8 Motion",           desc: "cosmos / e8-motion",                           url: BASE + "/cosmos/e8-motion/" },
+  { id: "cosmic-web",         tag: "宇宙・幾何",   title: "Cosmic Web",          desc: "宇宙の大規模構造シミュレーター",               url: BASE + "/cosmic-web/" },
+  { id: "black-hole",         tag: "宇宙・幾何",   title: "Gargantua",           desc: "ブラックホール・シミュレーター",               url: BASE + "/black-hole/" },
+  { id: "chaos-curves",       tag: "宇宙・幾何",   title: "Chaos Curves",        desc: "カオスの曲線",                                 url: BASE + "/chaos-curves/" },
+  { id: "reentry",            tag: "宇宙ミッション", title: "REENTRY",           desc: "大気圏再突入",                                 url: BASE + "/Reentry/" },
+  { id: "artemis2",           tag: "宇宙ミッション", title: "ARTEMIS II",        desc: "Utility AI ミッション・シミュレーション",      url: BASE + "/NASAArtemis2/" },
+  { id: "sakiku-demo",        tag: "サイトデザイン", title: "左菊 デザイン検証",  desc: "SAKIKU DESIGN STUDY",                          url: BASE + "/sakiku-demo/" },
+  { id: "my-hp",              tag: "サイトデザイン", title: "橘 凛 — AI Engineer", desc: "ホームページの習作",                          url: "https://my-hp-chi.vercel.app" },
+];
+
+const grid = document.getElementById("grid");
+const nav = document.getElementById("nav");
+const toast = document.getElementById("toast");
+let toastTimer;
+
+function say(text) {
+  toast.textContent = text;
+  toast.classList.add("on");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove("on"), 1600);
+}
+
+async function share(work) {
+  if (navigator.share) {
+    try { await navigator.share({ title: work.title, url: work.url }); } catch (e) {}
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(work.url);
+    say("リンクをコピーしました");
+  } catch (e) {
+    prompt("このリンクをコピーしてください", work.url);
+  }
+}
+
+for (const w of WORKS) {
+  const card = document.createElement("article");
+  card.className = "card";
+  card.dataset.tag = w.tag;
+
+  const open = document.createElement("a");
+  open.className = "open";
+  open.href = w.url;
+  const img = document.createElement("img");
+  img.className = "thumb";
+  img.src = "thumbs/" + w.id + ".jpg";
+  img.alt = "";
+  img.loading = "lazy";
+  const body = document.createElement("div");
+  body.className = "body";
+  const title = document.createElement("h2");
+  title.className = "title";
+  title.textContent = w.title;
+  const desc = document.createElement("p");
+  desc.className = "desc";
+  desc.textContent = w.desc;
+  body.append(title, desc);
+  open.append(img, body);
+
+  const foot = document.createElement("div");
+  foot.className = "foot";
+  const tag = document.createElement("span");
+  tag.className = "tag";
+  tag.textContent = w.tag;
+  const btn = document.createElement("button");
+  btn.className = "share";
+  btn.type = "button";
+  btn.textContent = "リンクを送る";
+  btn.addEventListener("click", () => share(w));
+  foot.append(tag, btn);
+
+  card.append(open, foot);
+  grid.append(card);
+}
+
+function filter(tag) {
+  let shown = 0;
+  for (const card of grid.children) {
+    card.hidden = tag !== "すべて" && card.dataset.tag !== tag;
+    if (!card.hidden) shown++;
+  }
+  for (const b of nav.children) b.setAttribute("aria-pressed", String(b.textContent === tag));
+  document.getElementById("count").textContent = shown + " 本";
+}
+
+for (const tag of ["すべて", ...new Set(WORKS.map(w => w.tag))]) {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.textContent = tag;
+  b.addEventListener("click", () => filter(tag));
+  nav.append(b);
+}
+filter("すべて");
+</script>
+</body>
+</html>
